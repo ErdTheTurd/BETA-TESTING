@@ -1,231 +1,410 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>FaithGuess</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <style>
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f5f7fb;
-      color: #111;
-    }
-
-    .screen {
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 24px;
-    }
-
-    .card {
-      max-width: 520px;
-      width: 100%;
-    }
-
-    img {
-      width: 100%;
-      border-radius: 16px;
-      margin-bottom: 16px;
-    }
-
-    button {
-      width: 100%;
-      padding: 14px;
-      margin-bottom: 10px;
-      border-radius: 14px;
-      border: none;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .choice {
-      background: white;
-      border: 2px solid #e5e7eb;
-    }
-
-    .correct {
-      background: #22c55e;
-      color: white;
-    }
-
-    .wrong {
-      background: #ef4444;
-      color: white;
-    }
-
-    .disabled {
-      opacity: 0.7;
-      cursor: default;
-    }
-
-    .primary {
-      background: #4f46e5;
-      color: white;
-    }
-
-    .explanation {
-      background: #eef2ff;
-      padding: 12px;
-      border-radius: 12px;
-      margin: 12px 0;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-    }
-
-    h1, h2 {
-      text-align: center;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulse Runner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0a0a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        #container { position: relative; }
+        canvas { border: 2px solid #8b5cf6; border-radius: 16px; display: block; box-shadow: 0 0 60px rgba(139, 92, 246, 0.3); }
+        .menu {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        .hidden { display: none !important; }
+        h1 { font-size: 64px; margin-bottom: 40px; background: linear-gradient(to right, #a855f7, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        button {
+            padding: 16px 32px;
+            margin: 8px;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            background: linear-gradient(to right, #a855f7, #ec4899);
+            color: white;
+        }
+        button:hover { transform: scale(1.05); }
+        .level { background: rgba(139, 92, 246, 0.2); border: 1px solid #8b5cf6; padding: 12px; margin: 8px 0; border-radius: 8px; cursor: pointer; }
+        .level:hover { background: rgba(139, 92, 246, 0.4); }
+        .score { position: absolute; top: 20px; left: 20px; font-size: 48px; font-weight: bold; color: #a855f7; }
+        .mode { position: absolute; top: 20px; right: 20px; background: rgba(34, 211, 238, 0.2); border: 1px solid #22d3ee; padding: 8px 16px; border-radius: 8px; color: #22d3ee; }
+        input[type="color"] { width: 80px; height: 40px; border: none; border-radius: 8px; cursor: pointer; }
+    </style>
 </head>
-
 <body>
-<div id="app"></div>
-
-<script>
-const quizData = {
-  places: [
-    {
-      image: "images/places/synagogue.png",
-      correct: "Judaism",
-      options: ["Christianity","Judaism","Zoroastrianism","Islam"],
-      explanation: "Synagogues are Jewish places of worship."
-    },
-    {
-      image: "images/places/kaaba.png",
-      correct: "Islam",
-      options: ["Judaism","Islam","Christianity","Baháʼí"],
-      explanation: "The Kaaba is Islam’s most sacred site."
-    }
-  ],
-  people: [
-    {
-      image: "images/people/sikh-turban.png",
-      correct: "Sikhism",
-      options: ["Islam","Sikhism","Hinduism","Jainism"],
-      explanation: "Turbans are a religious requirement in Sikhism."
-    }
-  ]
-};
-
-let category = null;
-let questions = [];
-let index = 0;
-let score = 0;
-let answered = false;
-let selected = null;
-
-const app = document.getElementById("app");
-
-function shuffle(arr) {
-  return [...arr].sort(() => Math.random() - 0.5);
-}
-
-function renderCategorySelect() {
-  app.innerHTML = `
-    <div class="screen">
-      <div class="card">
-        <h1>FaithGuess</h1>
-        <div class="grid">
-          ${Object.keys(quizData).map(k =>
-            `<button class="primary" onclick="startGame('${k}')">${k.toUpperCase()}</button>`
-          ).join("")}
+    <div id="container">
+        <canvas id="canvas" width="700" height="400"></canvas>
+        
+        <div id="mainMenu" class="menu">
+            <h1>PULSE RUNNER</h1>
+            <button onclick="showLevels()">PLAY LEVELS</button>
+            <button onclick="showCustomize()">CUSTOMIZE</button>
         </div>
-      </div>
+
+        <div id="levelsMenu" class="menu hidden">
+            <h2>SELECT LEVEL</h2>
+            <div id="levelsList"></div>
+            <button onclick="showMain()">BACK</button>
+        </div>
+
+        <div id="customizeMenu" class="menu hidden">
+            <h2>CUSTOMIZE PLAYER</h2>
+            <p>Player Color: <input type="color" id="colorPicker" value="#8b5cf6"></p>
+            <p>Trail Color: <input type="color" id="trailPicker" value="#a855f7"></p>
+            <button onclick="showMain()">BACK</button>
+        </div>
+
+        <div id="gameOverMenu" class="menu hidden">
+            <h2>GAME OVER</h2>
+            <p id="finalScore" style="font-size: 48px; margin: 20px 0;"></p>
+            <button onclick="restart()">TRY AGAIN</button>
+            <button onclick="showLevels()">LEVELS</button>
+        </div>
+
+        <div id="scoreDisplay" class="score hidden"></div>
+        <div id="modeDisplay" class="mode hidden"></div>
     </div>
-  `;
-}
 
-function startGame(cat) {
-  category = cat;
-  questions = shuffle(quizData[cat]);
-  index = 0;
-  score = 0;
-  renderQuestion();
-}
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let state = 'menu';
+        let playerY = 252;
+        let velocity = 0;
+        let offset = 0;
+        let score = 0;
+        let rotation = 0;
+        let jumping = false;
+        let particles = [];
+        let trail = [];
+        let currentLevel = null;
+        let mode = 'cube';
+        let holding = false;
+        let playerColor = '#8b5cf6';
+        let trailColor = '#a855f7';
 
-function renderQuestion() {
-  const q = questions[index];
-  answered = false;
-  selected = null;
+        const levels = [
+            { name: "First Steps", obstacles: [{x:600,t:'spike',h:45},{x:900,t:'spike',h:45},{x:1200,t:'spike',h:45}], portals: [] },
+            { name: "Learning Curve", obstacles: [{x:500,t:'spike',h:45},{x:750,t:'block',h:65},{x:1050,t:'spike',h:45}], portals: [] },
+            { name: "Mode Switch", obstacles: [{x:500,t:'spike',h:45},{x:900,t:'block',h:65}], portals: [{x:700,m:'ship'},{x:1100,m:'cube'}] },
+            { name: "UFO Flight", obstacles: [{x:600,t:'block',h:65},{x:900,t:'spike',h:45}], portals: [{x:400,m:'ufo'}] },
+            { name: "Wave Rider", obstacles: [{x:500,t:'block',h:65},{x:800,t:'block',h:65}], portals: [{x:350,m:'wave'}] },
+            { name: "Ball Roll", obstacles: [{x:500,t:'spike',h:45},{x:800,t:'block',h:65}], portals: [{x:350,m:'ball'}] },
+            { name: "Mixed Modes", obstacles: [{x:400,t:'spike',h:45},{x:800,t:'block',h:65},{x:1200,t:'spike',h:45}], portals: [{x:600,m:'ship'},{x:1000,m:'ufo'}] },
+            { name: "Chaos Canyon", obstacles: [{x:500,t:'double',h:45},{x:800,t:'block',h:65},{x:1050,t:'triple',h:45}], portals: [{x:350,m:'wave'},{x:900,m:'ball'}] },
+            { name: "Ultimate Test", obstacles: [{x:450,t:'triple',h:45},{x:800,t:'block',h:65},{x:1350,t:'triple',h:45}], portals: [{x:300,m:'ship'},{x:1100,m:'ufo'}] },
+            { name: "Impossible Dream", obstacles: [{x:400,t:'double',h:45},{x:650,t:'triple',h:45},{x:1000,t:'block',h:65},{x:1600,t:'double',h:45}], portals: [{x:250,m:'wave'},{x:800,m:'ball'},{x:1400,m:'ship'}] }
+        ];
 
-  const opts = shuffle(q.options);
+        function showMain() {
+            state = 'menu';
+            document.getElementById('mainMenu').classList.remove('hidden');
+            document.getElementById('levelsMenu').classList.add('hidden');
+            document.getElementById('customizeMenu').classList.add('hidden');
+            document.getElementById('gameOverMenu').classList.add('hidden');
+            document.getElementById('scoreDisplay').classList.add('hidden');
+            document.getElementById('modeDisplay').classList.add('hidden');
+            draw();
+        }
 
-  app.innerHTML = `
-    <div class="screen">
-      <div class="card">
-        <img src="${q.image}">
-        ${opts.map(o =>
-          `<button class="choice" onclick="answer('${o}')">${o}</button>`
-        ).join("")}
-      </div>
-    </div>
-  `;
-}
+        function showLevels() {
+            state = 'levels';
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('levelsMenu').classList.remove('hidden');
+            const list = document.getElementById('levelsList');
+            list.innerHTML = '';
+            levels.forEach((lv, i) => {
+                const div = document.createElement('div');
+                div.className = 'level';
+                div.textContent = `${i + 1}. ${lv.name}`;
+                div.onclick = () => startGame(lv);
+                list.appendChild(div);
+            });
+        }
 
-function answer(opt) {
-  if (answered) return;
-  answered = true;
-  selected = opt;
+        function showCustomize() {
+            state = 'customize';
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('customizeMenu').classList.remove('hidden');
+            document.getElementById('colorPicker').value = playerColor;
+            document.getElementById('trailPicker').value = trailColor;
+            playerY = 252;
+            draw();
+        }
 
-  const q = questions[index];
-  if (opt === q.correct) score++;
+        function startGame(lv) {
+            currentLevel = lv;
+            state = 'playing';
+            playerY = 252;
+            velocity = 0;
+            rotation = 0;
+            offset = 0;
+            score = 0;
+            particles = [];
+            trail = [];
+            jumping = false;
+            mode = 'cube';
+            holding = false;
+            document.getElementById('levelsMenu').classList.add('hidden');
+            document.getElementById('scoreDisplay').classList.remove('hidden');
+            document.getElementById('modeDisplay').classList.remove('hidden');
+            gameLoop();
+        }
 
-  renderAnswer();
-}
+        function restart() {
+            document.getElementById('gameOverMenu').classList.add('hidden');
+            startGame(currentLevel);
+        }
 
-function renderAnswer() {
-  const q = questions[index];
+        function gameOver() {
+            state = 'dead';
+            document.getElementById('gameOverMenu').classList.remove('hidden');
+            document.getElementById('finalScore').textContent = Math.floor(score / 10);
+            document.getElementById('scoreDisplay').classList.add('hidden');
+            document.getElementById('modeDisplay').classList.add('hidden');
+        }
 
-  app.innerHTML = `
-    <div class="screen">
-      <div class="card">
-        <img src="${q.image}">
-        ${q.options.map(o => {
-          let cls = "choice disabled";
-          if (o === q.correct) cls = "correct";
-          else if (o === selected) cls = "wrong";
-          return `<button class="${cls}">${o}</button>`;
-        }).join("")}
+        canvas.addEventListener('mousedown', () => { if (state === 'playing') jump(); });
+        canvas.addEventListener('mouseup', () => { holding = false; });
+        document.addEventListener('keydown', e => { if ((e.code === 'Space' || e.code === 'ArrowUp') && state === 'playing') { e.preventDefault(); jump(); } });
+        document.addEventListener('keyup', e => { if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); holding = false; } });
+        document.getElementById('colorPicker').addEventListener('input', e => { playerColor = e.target.value; draw(); });
+        document.getElementById('trailPicker').addEventListener('input', e => { trailColor = e.target.value; draw(); });
 
-        <div class="explanation">${q.explanation}</div>
+        function jump() {
+            if (mode === 'cube' || mode === 'ball') {
+                if (playerY >= 250) {
+                    velocity = -12;
+                    jumping = true;
+                    for (let i = 0; i < 8; i++) particles.push({x:90, y:playerY+28, vx:(Math.random()-0.5)*5, vy:Math.random()*-4-1, life:30, size:Math.random()*3+2});
+                }
+            } else if (mode === 'ufo') {
+                velocity = -8;
+                jumping = true;
+                for (let i = 0; i < 8; i++) particles.push({x:90, y:playerY+14, vx:(Math.random()-0.5)*5, vy:Math.random()*-4-1, life:30, size:Math.random()*3+2});
+            } else {
+                holding = true;
+            }
+        }
 
-        <button class="primary" onclick="next()">Next</button>
-      </div>
-    </div>
-  `;
-}
+        function gameLoop() {
+            if (state !== 'playing') return;
 
-function next() {
-  index++;
-  if (index >= questions.length) {
-    renderScore();
-  } else {
-    renderQuestion();
-  }
-}
+            if (mode === 'ship') velocity += holding ? -0.7 : 0.48;
+            else if (mode === 'wave') velocity = holding ? -6 : 6;
+            else velocity += 0.6;
 
-function renderScore() {
-  app.innerHTML = `
-    <div class="screen">
-      <div class="card">
-        <h2>Quiz Complete</h2>
-        <h1>${score} / ${questions.length}</h1>
-        <button class="primary" onclick="renderCategorySelect()">Play Again</button>
-      </div>
-    </div>
-  `;
-}
+            playerY += velocity;
+            if (playerY >= 252) { playerY = 252; jumping = false; if (mode === 'cube' || mode === 'ball') rotation = 0; }
+            if (playerY < 20) { playerY = 20; if (mode !== 'wave') velocity = 0; }
 
-renderCategorySelect();
-</script>
+            if (mode === 'cube' && jumping) rotation = (rotation + 8) % 360;
+            else if (mode === 'ball') rotation = (rotation + 6) % 360;
+            else if (mode === 'ship') rotation = Math.min(Math.max(velocity * 3, -30), 30);
+            else if (mode === 'ufo') rotation = Math.sin(offset * 0.1) * 10;
+
+            trail.push({x:90, y:playerY});
+            if (trail.length > 12) trail.shift();
+
+            offset += 6;
+            score++;
+
+            particles = particles.map(p => ({...p, x:p.x+p.vx, y:p.y+p.vy, vy:p.vy+0.4, life:p.life-1})).filter(p => p.life > 0);
+
+            checkCollision();
+            checkPortals();
+
+            document.getElementById('scoreDisplay').textContent = Math.floor(score / 10);
+            document.getElementById('modeDisplay').textContent = mode.toUpperCase();
+
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function checkCollision() {
+            if (!currentLevel) return;
+            const maxX = Math.max(...currentLevel.obstacles.map(o => o.x), ...(currentLevel.portals?.map(p => p.x) || [])) + 500;
+            currentLevel.obstacles.forEach(obs => {
+                const x = obs.x - (offset % maxX);
+                if (x > -50 && x < 700) {
+                    const pl = 90, pr = 118, pb = playerY + 28, pad = 5;
+                    if (obs.t === 'spike' && pr-pad > x+8 && pl+pad < x+37 && pb-pad > 300-obs.h) gameOver();
+                    else if (obs.t === 'block' && pr-pad > x && pl+pad < x+40 && pb-pad > 300-obs.h) gameOver();
+                    else if (obs.t === 'double') {
+                        for (let i = 0; i < 2; i++) if (pr-pad > x+(i*50)+8 && pl+pad < x+(i*50)+37 && pb-pad > 300-obs.h) gameOver();
+                    } else if (obs.t === 'triple') {
+                        for (let i = 0; i < 3; i++) if (pr-pad > x+(i*38)+8 && pl+pad < x+(i*38)+32 && pb-pad > 300-obs.h) gameOver();
+                    }
+                }
+            });
+        }
+
+        function checkPortals() {
+            if (!currentLevel || !currentLevel.portals) return;
+            const maxX = Math.max(...currentLevel.obstacles.map(o => o.x), ...currentLevel.portals.map(p => p.x)) + 500;
+            currentLevel.portals.forEach(portal => {
+                const x = portal.x - (offset % maxX);
+                if (x > 80 && x < 120) {
+                    mode = portal.m;
+                    jumping = false;
+                    rotation = 0;
+                    if (mode === 'cube' || mode === 'ball') { playerY = 252; velocity = 0; }
+                }
+            });
+        }
+
+        function draw() {
+            ctx.fillStyle = '#1a1a3e';
+            ctx.fillRect(0, 0, 700, 400);
+
+            const grid = (offset * 0.5) % 40;
+            ctx.strokeStyle = 'rgba(139, 92, 246, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 700; i += 40) { ctx.beginPath(); ctx.moveTo(i-grid, 0); ctx.lineTo(i-grid, 400); ctx.stroke(); }
+            for (let i = 0; i < 400; i += 40) { ctx.beginPath(); ctx.moveTo(0, i-grid); ctx.lineTo(700, i-grid); ctx.stroke(); }
+
+            ctx.fillStyle = '#a855f7';
+            ctx.fillRect(0, 300, 700, 3);
+
+            if (currentLevel && (state === 'playing' || state === 'dead')) {
+                const maxX = Math.max(...currentLevel.obstacles.map(o => o.x), ...(currentLevel.portals?.map(p => p.x) || [])) + 500;
+                
+                if (currentLevel.portals) {
+                    currentLevel.portals.forEach(p => {
+                        const x = p.x - (offset % maxX);
+                        if (x > -50 && x < 700) {
+                            ctx.fillStyle = 'rgba(34, 211, 238, 0.6)';
+                            ctx.fillRect(x, 200, 30, 100);
+                            ctx.strokeStyle = '#22d3ee';
+                            ctx.lineWidth = 3;
+                            ctx.strokeRect(x, 200, 30, 100);
+                            ctx.fillStyle = '#fff';
+                            ctx.font = 'bold 10px sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(p.m.toUpperCase(), x+15, 255);
+                        }
+                    });
+                }
+
+                currentLevel.obstacles.forEach(obs => {
+                    const x = obs.x - (offset % maxX);
+                    if (x > -100 && x < 700) {
+                        ctx.fillStyle = '#ec4899';
+                        if (obs.t === 'spike') {
+                            ctx.beginPath();
+                            ctx.moveTo(x+8, 300);
+                            ctx.lineTo(x+22, 300-obs.h);
+                            ctx.lineTo(x+37, 300);
+                            ctx.closePath();
+                            ctx.fill();
+                        } else if (obs.t === 'block') {
+                            ctx.fillRect(x, 300-obs.h, 40, obs.h);
+                        } else if (obs.t === 'double') {
+                            for (let i = 0; i < 2; i++) {
+                                ctx.beginPath();
+                                ctx.moveTo(x+(i*50)+8, 300);
+                                ctx.lineTo(x+(i*50)+22, 300-obs.h);
+                                ctx.lineTo(x+(i*50)+37, 300);
+                                ctx.closePath();
+                                ctx.fill();
+                            }
+                        } else if (obs.t === 'triple') {
+                            for (let i = 0; i < 3; i++) {
+                                ctx.beginPath();
+                                ctx.moveTo(x+(i*38)+8, 300);
+                                ctx.lineTo(x+(i*38)+20, 300-obs.h);
+                                ctx.lineTo(x+(i*38)+32, 300);
+                                ctx.closePath();
+                                ctx.fill();
+                            }
+                        }
+                    }
+                });
+            }
+
+            if (state === 'playing' || state === 'dead') {
+                trail.forEach((t, i) => {
+                    const a = (i / trail.length) * 0.5;
+                    ctx.fillStyle = trailColor + Math.floor(a*255).toString(16).padStart(2,'0');
+                    if (mode === 'cube' || mode === 'ball') ctx.fillRect(t.x, t.y, 28, 28);
+                    else { ctx.beginPath(); ctx.arc(t.x+14, t.y+14, 14, 0, Math.PI*2); ctx.fill(); }
+                });
+
+                particles.forEach(p => {
+                    const a = p.life / 30;
+                    ctx.fillStyle = playerColor + Math.floor(a*255).toString(16).padStart(2,'0');
+                    ctx.beginPath();
+                    ctx.arc(p.x-offset*0.3, p.y, p.size, 0, Math.PI*2);
+                    ctx.fill();
+                });
+            }
+
+            ctx.save();
+            ctx.translate(104, playerY+14);
+            ctx.rotate((rotation * Math.PI) / 180);
+            ctx.fillStyle = playerColor;
+            
+            if (mode === 'cube') {
+                ctx.fillRect(-14, -14, 28, 28);
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-14, -14, 28, 28);
+            } else if (mode === 'ship') {
+                ctx.beginPath();
+                ctx.moveTo(14, 0);
+                ctx.lineTo(-14, -14);
+                ctx.lineTo(-9, 0);
+                ctx.lineTo(-14, 14);
+                ctx.closePath();
+                ctx.fill();
+            } else if (mode === 'ball') {
+                ctx.beginPath();
+                ctx.arc(0, 0, 14, 0, Math.PI*2);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            } else if (mode === 'ufo') {
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = trailColor;
+                ctx.beginPath();
+                ctx.ellipse(0, -3, 9, 6, 0, 0, Math.PI*2);
+                ctx.fill();
+            } else if (mode === 'wave') {
+                ctx.beginPath();
+                ctx.moveTo(-14, 0);
+                for (let i = -14; i <= 14; i += 2) ctx.lineTo(i, Math.sin((i+offset)*0.3)*8);
+                ctx.lineTo(14, 9);
+                ctx.lineTo(-14, 9);
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        }
+
+        draw();
+    </script>
 </body>
 </html>
